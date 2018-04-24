@@ -16,6 +16,7 @@ def main():
     start = now - interval
     sales_orders_per_day =  1000
     purchase_orders_per_day =  500
+    first = True
     for i, day in enumerate(daterange(start,now)):
         for o in range(sales_orders_per_day):
             mocker.insert_statements.append(random_sales_order(order_creation_date = day))
@@ -23,7 +24,9 @@ def main():
             mocker.insert_statements.append(random_purchase_order(order_creation_date = day))
         if i % 10 == 0:
             print ("on day {}".format(day.strftime("%d/%m/%y")))
-            mocker.run_insert_statements()
+            if first:
+                mocker.run_insert_statements()
+                first = False
     close_cursor()
 
 if __name__ == '__main__':
