@@ -239,11 +239,12 @@ class mockData(object):
 
     def run_insert_statements(self):
         get_cursor()
-        for stmt in self.insert_statements:
-            if isinstance(stmt,dict):
-                stmt = self.generate_insert_statement(**stmt)
-            execute_cursor(stmt)
-        commit_connection()
+        if self.insert_statements:
+            for stmt in self.insert_statements:
+                if isinstance(stmt,dict):
+                    stmt = self.generate_insert_statement(**stmt)
+                execute_cursor(stmt)
+                commit_connection()
         close_cursor()
 
 def main():
