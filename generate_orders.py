@@ -23,8 +23,8 @@ def main():
             mocker.insert_statements.append(random_purchase_order(order_creation_date = day))
         if i % 10 == 0:
             print ("on day {}".format(day.strftime("%d/%m/%y")))
+            mocker.run_insert_statements()
     close_cursor()
-
 
 if __name__ == '__main__':
 	main()
