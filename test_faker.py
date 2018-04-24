@@ -57,6 +57,7 @@ def random_sales_order():
     result["order_status"] = rd.choice(possible_status)
     result["site_id"] = get_random_value_from_column("sites","id")[0]
     result["quantity"] = rd.randint(0,100)
+    if result["order_status"]  not in ["222-222","000-222","222-111"]:
         result["order_expected_delivery"] = fake_factory.future_date()
     else:
         result["order_expected_delivery"] = fake_factory.past_date()
