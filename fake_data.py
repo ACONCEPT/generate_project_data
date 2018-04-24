@@ -152,7 +152,11 @@ class mockData(object):
 
     def generate_insert_statement(self,**kwargs):
         base_stmt = "insert into {} ({}) values ({});"
-        column_definitions = self.table_definitions.get(self.current_table)
+        try:
+            column_definitions = self.table_definitions.get(self.current_table)
+        except:
+            self.table_definitions = read_table_definitions()
+            column_definitions = self.table_definitions.get(self.current_table)
         cols = []
         vals = []
         for column,data in kwargs.items():
@@ -260,4 +264,5 @@ def main():
     mocker.run_insert_statements()
 
 if __name__ == '__main__':
-    main()
+    get_base_table_descriptions()
+
