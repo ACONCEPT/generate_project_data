@@ -1,6 +1,11 @@
 import psycopg2
 import sys
 
+def get_conn_string():
+    with open("../postgres_connection_string","r") as f:
+        return f.read().strip()
+
+
 def create_tables(conn_string):
     """ create tables in the PostgreSQL database"""
     commands = (
@@ -13,6 +18,9 @@ def create_tables(conn_string):
         DROP TABLE IF EXISTS purchase_orders;
         DROP TABLE IF EXISTS parts;
         DROP TABLE IF EXISTS sites;
+        DROP TABLE IF EXISTS inventory;
+        DROP TABLE IF EXISTS inventory_movements;
+        DROP TABLE IF EXISTS work_orders;
         """,
         """
         CREATE TABLE IF NOT EXISTS sites (
@@ -42,9 +50,25 @@ def create_tables(conn_string):
                 ON UPDATE CASCADE ON DELETE CASCADE)
         """,
         """
+        CREATE TABLE IF NOT EXISTS inventory (
+                site_id INTEGER NOT NULL,
+                part_id INTEGER NOT NULL,
+                status VARCHAR(25) NOT NULL,
+                quantity INTEGER NOT NULL)
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS inventory_movements (
+                source_site_id INTEGER NOT NULL,
+                part_id INTEGER NOT NULL,
+                source_status VARCHAR(25) NOT NULL,
+                target_site_id  INTEGER NOT NULL,
+                target_status VARCHAR(25) NOT NULL,
+                transaction_time TIMESTAMP)
+        """,
+        """
         CREATE TABLE IF NOT EXISTS purchase_orders (
                 id SERIAL PRIMARY KEY,
-                part_id VARCHAR(100) NOT NULL,
+                part_id INTEGER NOT NULL,
                 supplier_id INTEGER NOT NULL,
                 site_id INTEGER NOT NULL,
                 quantity INTEGER NOT NULL,
@@ -54,6 +78,18 @@ def create_tables(conn_string):
                 FOREIGN KEY(site_id)
                 REFERENCES sites (id)
                 ON UPDATE CASCADE ON DELETE CASCADE)
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS work_orders(
+                id SERIAL PRIMARY KEY,
+                part_id INTEGER NOT NULL,
+                site_id INTEGER NOT NULL,
+                quantity INTEGER NOT NULL,
+                work_type VARCHAR(25),
+                order_creation_date TIMESTAMP,
+                order_expected_date TIMESTAMP,
+                order_status VARCHAR(25))
+
         """,
         """
         CREATE TABLE IF NOT EXISTS suppliers (
@@ -119,7 +155,6 @@ def create_tables(conn_string):
             conn.close()
 
 if __name__ == '__main__':
-    for i, x in enumerate(sys.stdin):
-        if i == 0:
-            conn_string = x.strip()
+    conn_string = get_conn_string()
     create_tables(conn_string)
+

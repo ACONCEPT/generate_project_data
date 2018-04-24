@@ -36,7 +36,7 @@ def random_supplier():
     result["address"] = fake_factory.address()
     return result
 
-def random_sales_order():
+def random_sales_order(**kwargs):
     global fake_factory
     possible_status = ["000-000",\
                        #new open order
@@ -48,22 +48,27 @@ def random_sales_order():
                        #canceled order
                        "222-111"]
                        #partially late order
-
     result  ={}
     customer_id, part_id = get_random_value_from_column("part_customers","customer_id, part_id")
     result["part_id"] = part_id
     result["customer_id"] = customer_id
-    result["order_creation_date"] = fake_factory.past_date()
+    ocd = kwargs.get("order_creation_date")
+    if not ocd:
+        ocd = fake_factory.past_date()
+    result["order_creation_date"] = ocd
     result["order_status"] = rd.choice(possible_status)
     result["site_id"] = get_random_value_from_column("sites","id")[0]
     result["quantity"] = rd.randint(0,100)
     if result["order_status"]  not in ["222-222","000-222","222-111"]:
-        result["order_expected_delivery"] = fake_factory.future_date()
+        oed = kwargs.get("order_expected_delivery")
+        if not oed:
+            oed = fake_factory.future_date()
+        result["order_expected_delivery"] =  oed
     else:
         result["order_expected_delivery"] = fake_factory.past_date()
     return result
 
-def random_purchase_order():
+def random_purchase_order(**kwargs):
     global fake_factory
     possible_status = ["open","closed","partial"]
     result = {}
@@ -71,11 +76,17 @@ def random_purchase_order():
     result["part_id"] = part_id
     result["supplier_id"] = supplier_id
     result["order_creation_date"] = fake_factory.past_date()
+    ocd = kwargs.get("order_creation_date")
+    if not ocd:
+        ocd = fake_factory.past_date()
     result["order_status"] = rd.choice(possible_status)
     result["site_id"] = get_random_value_from_column("sites","id")[0]
     result["quantity"] = rd.randint(0,100)
     if result["order_status"] not in ["closed","partial"]:
-        result["order_expected_receipt"] = fake_factory.future_date()
+        oer = kwargs.get("order_expected_receipt")
+        if not oer:
+            oer = fake_factory.future_date()
+        result["order_expected_receipt"] = oer
     else:
         result["order_expected_receipt"] = fake_factory.past_date()
     return result
@@ -114,19 +125,30 @@ def random_site():
     return {"name":result,"location":loc}
 
 class mockData(object):
-    def __init__(self,config):
-		data_to_mock = {\
-		"sites": (10,random_site),\
-		"parts":(50,random_part),\
-		"customers":(15,random_customer),\
-		"suppliers":(5,random_supplier),\
-		"sales_orders":(50,random_sales_order),\
-		"purchase_orders":(50,random_purchase_order)}
-        self.config = data_to_mock
-
+    def __init__(self):
+        self.config = {\
+                       "sites": (10,random_site),\
+                       "parts":(50,random_part),\
+                       "customers":(15,random_customer),\
+                       "suppliers":(5,random_supplier),\
+                       "sales_orders":(50,random_sales_order),\
+                       "purchase_orders":(50,random_purchase_order)}
         self.commands = ["sites","parts","customers","sales_orders","purchase_orders","suppliers"]
         self.table_definitions = read_table_definitions()
         self.current_table = None
+        self.insert_statements = []
+        get_base_table_descriptions()
+        global fake_factory
+        global product_data
+        product_data = read_product_data()
+        fake_factory = Faker()
+
+    def set_quantity(self,configitem,amount):
+        current_config = self.config.get(configitem)
+        new_config = (amount,current_config[1])
+        print("updating {}  from {} to {} ".format(configitem,current_config, new_config))
+        self.config[configitem] = new_config
+
 
     def generate_insert_statement(self,**kwargs):
         base_stmt = "insert into {} ({}) values ({});"
@@ -190,6 +212,16 @@ class mockData(object):
                 self.insert_statements.append(insert_stmt)
         close_cursor()
 
+    def generate_starting_inventory(self):
+        result = {}
+        possible_status = ["available","expired","qa_hold"]
+        result["site_id"] = get_random_value_from_column("sites","id")[0]
+        result["part_id"] = part_id
+        result["status"] = rd.choice(possible_status)
+        result["quantity"] = rd.randint(0, 20000)
+        insert_stmt = self.generate_insert_statement(**result)
+        self.insert_statements.append(insert_stmt)
+
     def data_generator(self):
         n,func = self.config.get(self.current_table)
         for i in range(n):
@@ -225,9 +257,4 @@ def main():
     mocker.run_insert_statements()
 
 if __name__ == '__main__':
-    get_base_table_descriptions()
-    global fake_factory
-    global product_data
-    product_data = read_product_data()
-    fake_factory = Faker()
     main()

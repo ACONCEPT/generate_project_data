@@ -1,6 +1,7 @@
 #! usr/bin/env python3
 import psycopg2
 import json
+from create_tables import get_conn_string
 """
 functions in module :
 	get_cursor
@@ -9,10 +10,6 @@ functions in module :
 	execute_query
     execute_cursor
 """
-
-def get_conn_string():
-    with open("../postgres_connection_string","r") as f:
-        return f.read().strip()
 
 def get_cursor():
     global CURSOR
