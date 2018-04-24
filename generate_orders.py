@@ -25,8 +25,9 @@ def main():
         if i % 10 == 0:
             print ("on day {}".format(day.strftime("%d/%m/%y")))
             if first:
-                mocker.run_insert_statements()
                 first = False
+            else:
+                mocker.run_insert_statements()
     close_cursor()
 
 if __name__ == '__main__':
