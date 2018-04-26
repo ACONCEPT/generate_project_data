@@ -12,7 +12,8 @@ def main():
     mocker = mockData()
     now = datetime.utcnow()
     year = 365
-    interval = timedelta(days = year *2)
+#    interval = timedelta(days = year *2)
+    interval = timedelta(days = 2)
     start = now - interval
     sales_orders_per_day =  1000
     purchase_orders_per_day =  500
