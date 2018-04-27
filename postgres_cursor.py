@@ -20,7 +20,6 @@ def get_cursor():
     CURSOR = CONNECTION.cursor()
 #    print(CURSOR)
 
-
 def execute_cursor(stmt):
     global CURSOR
 #    print("\n{}\n".format("executing {}".format(stmt)))
