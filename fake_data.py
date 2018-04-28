@@ -3,9 +3,9 @@ from faker import Faker
 import json
 import string
 import random as rd
-from postgres_cursor import get_cursor,commit_connection, close_cursor, execute_cursor
-from queries import get_column_from_table, get_random_value_from_column, get_base_table_descriptions #column, table whereclause
-from create_tables import create_tables
+from postgreslib.postgres_cursor import get_cursor,commit_connection, close_cursor, execute_cursor
+from postgreslib.queries import get_column_from_table, get_random_value_from_column, get_base_table_descriptions #column, table whereclause
+from postgreslib.create_tables import create_tables
 from datetime import datetime
 
 def random_part():
@@ -181,7 +181,6 @@ class mockData(object):
         return base_stmt.format(self.current_table,columns, values)
 
     def part_customer_data(self):
-        get_cursor()
         print("making part_customers data")
         self.current_table = "part_customers"
         part_list = get_column_from_table("parts","id")
@@ -196,10 +195,8 @@ class mockData(object):
                 record["delivery_lead_time"] = rd.randint(2,5)
                 insert_stmt = self.generate_insert_statement(**record)
                 self.insert_statements.append(insert_stmt)
-        close_cursor()
 
     def part_supplier_data(self):
-        get_cursor()
         print("making part_supplier data")
         self.current_table = "part_suppliers"
         part_list = get_column_from_table("parts","id")
@@ -214,7 +211,6 @@ class mockData(object):
                 record["supply_lead_time"] = rd.randint(1,30)
                 insert_stmt = self.generate_insert_statement(**record)
                 self.insert_statements.append(insert_stmt)
-        close_cursor()
 
     def generate_starting_inventory(self):
         result = {}
@@ -233,23 +229,17 @@ class mockData(object):
             yield self.generate_insert_statement(**row)
 
     def mock_data_from_config(self):
-        get_cursor()
         self.insert_statements = []
         for command in self.commands:
             self.current_table = command
             table_data_generator = self.data_generator()
             self.insert_statements += [stmt for stmt in table_data_generator ]
-        close_cursor()
 
     def run_insert_statements(self):
-        get_cursor()
         if self.insert_statements:
             for stmt in self.insert_statements:
                 if isinstance(stmt,dict):
                     stmt = self.generate_insert_statement(**stmt)
-                execute_cursor(stmt)
-                commit_connection()
-        close_cursor()
 
 def main():
     mocker = mockData(data_to_mock)
