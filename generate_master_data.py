@@ -1,6 +1,6 @@
 from postgreslib.create_tables import create_tables
 from postgreslib.queries import get_base_table_descriptions
-from postgreslib.postgres_cursor import get_connection,get_cursor, close_cursor, close_connection
+from postgreslib.postgres_cursor import get_connection,get_cursor, close_cursor, close_connection, commit_connection
 
 from fake_data import mockData
 
@@ -29,6 +29,7 @@ if __name__ == "__main__":
     mocker.part_supplier_data()
     print("running inserts")
     mocker.run_insert_statements()
+    commit_connection()
     close_cursor()
     close_connection()
 
