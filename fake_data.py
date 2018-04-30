@@ -182,10 +182,11 @@ class mockData(object):
         return base_stmt.format(self.current_table,columns, values)
 
     def part_customer_data(self):
-        print("making part_customers data")
         self.current_table = "part_customers"
         part_list = get_column_from_table("parts","id")
         customer_list = get_column_from_table("customers","id")
+        print("making part_customers data for {} customers and {} parts".format(len(customer_list),len(part_list)))
+
         for customer in customer_list:
             rd.shuffle(part_list)
             parts = rd.randint(0,len(part_list))
@@ -241,6 +242,7 @@ class mockData(object):
             for stmt in self.insert_statements:
                 if isinstance(stmt,dict):
                     stmt = self.generate_insert_statement(**stmt)
+                execute_cursor(stmt)
 
 def main():
     mocker = mockData(data_to_mock)

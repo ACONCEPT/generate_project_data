@@ -1,8 +1,11 @@
 #! usr/bin/env python3
-from datetime import datetime, timedelta
-from fake_data import random_sales_order,random_purchase_order, mockData
-from postgres_cursor import get_cursor, close_cursor
-from queries import get_base_table_descriptions
+
+from postgreslib.create_tables import create_tables
+from postgreslib.queries import get_base_table_descriptions
+from postgreslib.postgres_cursor import get_connection,get_cursor, close_cursor, close_connection, commit_connection
+from datetime import datetime,timedelta
+from fake_data import mockData, random_sales_order,random_purchase_order
+
 
 def daterange(start_date,end_date):
     for n in range(int ((end_date - start_date).days)):
@@ -12,7 +15,6 @@ def main():
     mocker = mockData()
     now = datetime.utcnow()
     year = 365
-#    interval = timedelta(days = year *2)
     interval = timedelta(days = 2)
     start = now - interval
     sales_orders_per_day =  1000
@@ -35,9 +37,15 @@ def main():
             if first:
                 first = False
             else:
+                print( "running {} inserts".format(len(mocker.insert_statements)))
                 mocker.run_insert_statements()
-                get_cursor()
+    rem = len(mocker.insert_statements)
+    if rem > 0:
+        print("{} inserts left".format(rem))
+        mocker.run_insert_statements()
+        commit_connection()
     close_cursor()
+    close_connection()
 
 if __name__ == '__main__':
     get_base_table_descriptions()

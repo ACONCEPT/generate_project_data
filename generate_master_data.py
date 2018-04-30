@@ -1,7 +1,7 @@
 from postgreslib.create_tables import create_tables
+
 from postgreslib.queries import get_base_table_descriptions
 from postgreslib.postgres_cursor import get_connection,get_cursor, close_cursor, close_connection, commit_connection
-
 from fake_data import mockData
 
 if __name__ == "__main__":
@@ -21,15 +21,23 @@ if __name__ == "__main__":
     mocker.set_quantity("suppliers",15)
     print("mocking data from config")
     mocker.mock_data_from_config()
-    print("running inserts")
-    mocker.run_insert_statements()
-    print("generating partcust")
-    mocker.part_customer_data()
-    print("generating supplier")
-    mocker.part_supplier_data()
+
     print("running inserts")
     mocker.run_insert_statements()
     commit_connection()
+
+    print("generating partcust")
+    mocker.part_customer_data()
+    commit_connection()
+
+    print("generating supplier")
+    mocker.part_supplier_data()
+    commit_connection()
+
+    print("running inserts")
+    mocker.run_insert_statements()
+    commit_connection()
+
     close_cursor()
     close_connection()
 
