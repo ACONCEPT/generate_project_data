@@ -2,3 +2,4 @@ env/
 base_table_definitions.json
 SAP_HANA_DATA/
 wasted_time/
+postgreslib/
