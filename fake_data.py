@@ -99,11 +99,6 @@ def get_fake_value(value_type):
         global fake_factory
         return getattr(fake_factory,value_type)()
 
-def read_table_definitions():
-    with open("base_table_definitions.json","r") as f:
-        data = json.loads(f.read())
-    return data
-
 def product_name():
     global product_data
     product = rd.choice(product_data)
@@ -136,7 +131,6 @@ class mockData(object):
                        "purchase_orders":(50,random_purchase_order)}
         self.commands = ["sites","parts","customers","sales_orders","purchase_orders","suppliers"]
         self.dbc = DBConnection(database)
-        self.table_definitions = read_table_definitions()
         self.current_table = None
         self.insert_statements = []
         global fake_factory
@@ -153,11 +147,7 @@ class mockData(object):
 
     def generate_insert_statement(self,**kwargs):
         base_stmt = "insert into {} ({}) values ({});"
-        try:
-            column_definitions = self.table_definitions.get(self.current_table)
-        except:
-            self.table_definitions = read_table_definitions()
-            column_definitions = self.table_definitions.get(self.current_table)
+        column_definitions = self.dbc.descriptions.get(self.current_table)
         cols = []
         vals = []
         for column,data in kwargs.items():
@@ -262,5 +252,5 @@ def main():
     mocker.run_insert_statements()
 
 if __name__ == '__main__':
-    get_base_table_descriptions()
+    pass
 
