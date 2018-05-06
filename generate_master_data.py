@@ -1,43 +1,40 @@
+import sys
+import os
+sys.path.append(os.environ["PROJECT_HOME"])
+from fake_data import mockData
 from postgreslib.create_tables import create_tables
 
-from postgreslib.queries import get_base_table_descriptions
-from postgreslib.postgres_cursor import get_connection,get_cursor, close_cursor, close_connection, commit_connection
-from fake_data import mockData
 
 if __name__ == "__main__":
-    print("starting main")
-    create_tables()
-    print("tables created")
-    mocker = mockData()
+
+    if "joe" in os.environ["HOME"]:
+        db = "test_database"
+    else:
+        db = "postgres_rds"
+
+    mocker = mockData("test_database")
+    create_tables(mocker.dbc)
+    print("tables created on {}".format(db))
+
     print("opened mocker")
-    get_connection()
-    get_cursor()
-    get_base_table_descriptions()
     mocker.commands = ["sites","parts","customers","suppliers"]
+
     print("setting quantities")
     mocker.set_quantity("sites",10)
     mocker.set_quantity("parts",50)
     mocker.set_quantity("customers",20)
     mocker.set_quantity("suppliers",15)
+
     print("mocking data from config")
     mocker.mock_data_from_config()
 
     print("running inserts")
     mocker.run_insert_statements()
-    commit_connection()
 
     print("generating partcust")
     mocker.part_customer_data()
-    commit_connection()
 
     print("generating supplier")
     mocker.part_supplier_data()
-    commit_connection()
 
-    print("running inserts")
-    mocker.run_insert_statements()
-    commit_connection()
-
-    close_cursor()
-    close_connection()
-
+    mocker.dbc.close_connection()

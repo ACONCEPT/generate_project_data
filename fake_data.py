@@ -1,12 +1,10 @@
 #! usr/bin/env python3
-
 from faker import Faker
 import json
 import string
 import random as rd
-from postgreslib.postgres_cursor import get_cursor,commit_connection, close_cursor, execute_cursor
-from postgreslib.queries import get_column_from_table, get_customer_lead_time, get_supply_lead_time,  get_random_value_from_column, get_base_table_descriptions #column, table whereclause
-from postgreslib.create_tables import create_tables
+from postgreslib.database_connection import DBConnection
+from psycopg2 import IntegrityError
 from datetime import datetime, timedelta
 
 def random_part():
@@ -37,7 +35,7 @@ def random_supplier():
     result["address"] = fake_factory.address()
     return result
 
-def random_sales_order(**kwargs):
+def random_sales_order(dbc,**kwargs):
     global fake_factory
     possible_status = ["000-000",\
                        #new open order
@@ -50,7 +48,7 @@ def random_sales_order(**kwargs):
                        "222-111"]
                        #partially late order
     result  ={}
-    customer_id, part_id = get_random_value_from_column("part_customers","customer_id, part_id")
+    customer_id, part_id = dbc.get_random_value_from_column("part_customers","customer_id, part_id")
     result["part_id"] = part_id
     result["customer_id"] = customer_id
     ocd = kwargs.get("order_creation_date")
@@ -58,23 +56,23 @@ def random_sales_order(**kwargs):
         ocd = fake_factory.past_date()
     result["order_creation_date"] = ocd
     result["order_status"] = rd.choice(possible_status)
-    result["site_id"] = get_random_value_from_column("sites","id")[0]
+    result["site_id"] = dbc.get_random_value_from_column("sites","id")[0]
     result["quantity"] = rd.randint(0,100)
     if result["order_status"]  not in ["222-222","000-222","222-111"]:
         oed = kwargs.get("order_expected_delivery")
         if not oed:
-            lt = get_customer_lead_time(part_id,customer_id) + rd.randint (-1,10)
+            lt = dbc.get_customer_lead_time(part_id,customer_id) + rd.randint (-1,10)
             oed = ocd + timedelta(days = lt)
         result["order_expected_delivery"] =  oed
     else:
         result["order_expected_delivery"] = fake_factory.past_date()
     return result
 
-def random_purchase_order(**kwargs):
+def random_purchase_order(dbc,**kwargs):
     global fake_factory
     possible_status = ["open","closed","partial"]
     result = {}
-    supplier_id, part_id = get_random_value_from_column("part_suppliers","supplier_id, part_id")
+    supplier_id, part_id = dbc.get_random_value_from_column("part_suppliers","supplier_id, part_id")
     result["part_id"] = part_id
     result["supplier_id"] = supplier_id
     result["order_creation_date"] = fake_factory.past_date()
@@ -82,12 +80,12 @@ def random_purchase_order(**kwargs):
     if not ocd:
         ocd = fake_factory.past_date()
     result["order_status"] = rd.choice(possible_status)
-    result["site_id"] = get_random_value_from_column("sites","id")[0]
+    result["site_id"] = dbc.get_random_value_from_column("sites","id")[0]
     result["quantity"] = rd.randint(0,100)
     if result["order_status"] not in ["closed","partial"]:
         oer = kwargs.get("order_expected_receipt",False)
         if not oer:
-            lt = get_supply_lead_time(part_id) + rd.randint (-1,10)
+            lt = dbc.get_supply_lead_time(part_id) + rd.randint (-1,10)
             oer = ocd + timedelta(days = lt)
         result["order_expected_receipt"] = oer
     else:
@@ -128,7 +126,7 @@ def random_site():
     return {"name":result,"location":loc}
 
 class mockData(object):
-    def __init__(self):
+    def __init__(self,database = "test_database"):
         self.config = {\
                        "sites": (10,random_site),\
                        "parts":(50,random_part),\
@@ -137,10 +135,10 @@ class mockData(object):
                        "sales_orders":(50,random_sales_order),\
                        "purchase_orders":(50,random_purchase_order)}
         self.commands = ["sites","parts","customers","sales_orders","purchase_orders","suppliers"]
+        self.dbc = DBConnection(database)
         self.table_definitions = read_table_definitions()
         self.current_table = None
         self.insert_statements = []
-        get_base_table_descriptions()
         global fake_factory
         global product_data
         product_data = read_product_data()
@@ -185,8 +183,8 @@ class mockData(object):
 
     def part_customer_data(self):
         self.current_table = "part_customers"
-        part_list = get_column_from_table("parts","id")
-        customer_list = get_column_from_table("customers","id")
+        part_list = self.dbc.get_column_from_table("parts","id")
+        customer_list =self.dbc.get_column_from_table("customers","id")
         print("making part_customers data for {} customers and {} parts".format(len(customer_list),len(part_list)))
 
         for customer in customer_list:
@@ -199,12 +197,13 @@ class mockData(object):
                 record["delivery_lead_time"] = rd.randint(2,5)
                 insert_stmt = self.generate_insert_statement(**record)
                 self.insert_statements.append(insert_stmt)
+        self.run_insert_statements()
 
     def part_supplier_data(self):
         print("making part_supplier data")
         self.current_table = "part_suppliers"
-        part_list = get_column_from_table("parts","id")
-        supplier_list = get_column_from_table("suppliers","id")
+        part_list = self.dbc.get_column_from_table("parts","id")
+        supplier_list = self.dbc.get_column_from_table("suppliers","id")
         for customer in supplier_list:
             rd.shuffle(part_list)
             parts = rd.randint(0,len(part_list))
@@ -215,6 +214,7 @@ class mockData(object):
                 record["supply_lead_time"] = rd.randint(1,30)
                 insert_stmt = self.generate_insert_statement(**record)
                 self.insert_statements.append(insert_stmt)
+        self.run_insert_statements()
 
     def generate_starting_inventory(self):
         result = {}
@@ -243,8 +243,11 @@ class mockData(object):
         if self.insert_statements:
             for stmt in self.insert_statements:
                 if isinstance(stmt,dict):
+                    print(stmt)
                     stmt = self.generate_insert_statement(**stmt)
-                execute_cursor(stmt)
+                self.dbc.execute_cursor(stmt,commit = True)
+        self.insert_statements = []
+
 
 def main():
     mocker = mockData(data_to_mock)
