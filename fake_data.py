@@ -5,9 +5,9 @@ import json
 import string
 import random as rd
 from postgreslib.postgres_cursor import get_cursor,commit_connection, close_cursor, execute_cursor
-from postgreslib.queries import get_column_from_table, get_random_value_from_column, get_base_table_descriptions #column, table whereclause
+from postgreslib.queries import get_column_from_table, get_customer_lead_time, get_supply_lead_time,  get_random_value_from_column, get_base_table_descriptions #column, table whereclause
 from postgreslib.create_tables import create_tables
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def random_part():
     global fake_factory
@@ -63,7 +63,8 @@ def random_sales_order(**kwargs):
     if result["order_status"]  not in ["222-222","000-222","222-111"]:
         oed = kwargs.get("order_expected_delivery")
         if not oed:
-            oed = fake_factory.future_date()
+            lt = get_customer_lead_time(part_id,customer_id) + rd.randint (-1,10)
+            oed = ocd + timedelta(days = lt)
         result["order_expected_delivery"] =  oed
     else:
         result["order_expected_delivery"] = fake_factory.past_date()
@@ -84,9 +85,10 @@ def random_purchase_order(**kwargs):
     result["site_id"] = get_random_value_from_column("sites","id")[0]
     result["quantity"] = rd.randint(0,100)
     if result["order_status"] not in ["closed","partial"]:
-        oer = kwargs.get("order_expected_receipt")
+        oer = kwargs.get("order_expected_receipt",False)
         if not oer:
-            oer = fake_factory.future_date()
+            lt = get_supply_lead_time(part_id) + rd.randint (-1,10)
+            oer = ocd + timedelta(days = lt)
         result["order_expected_receipt"] = oer
     else:
         result["order_expected_receipt"] = fake_factory.past_date()
