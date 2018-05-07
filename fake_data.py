@@ -6,6 +6,7 @@ import random as rd
 from postgreslib.database_connection import DBConnection
 from psycopg2 import IntegrityError
 from datetime import datetime, timedelta
+import os
 
 def random_part():
     global fake_factory
@@ -105,7 +106,7 @@ def product_name():
     return product
 
 def read_product_data(datafile ="json_data/nounlist.txt"):
-    datafile = "json_data/product_data_clean.json"
+    datafile = "{}/generate_project_data/json_data/product_data_clean.json".format(os.environ["PROJECT_HOME"])
     with open(datafile,"r") as f:
         data = json.loads(f.read())
     data_header = data.pop(0)
@@ -130,6 +131,7 @@ class mockData(object):
                        "sales_orders":(50,random_sales_order),\
                        "purchase_orders":(50,random_purchase_order)}
         self.commands = ["sites","parts","customers","sales_orders","purchase_orders","suppliers"]
+        print("mockdata got database name {}".format(database))
         self.dbc = DBConnection(database)
         self.current_table = None
         self.insert_statements = []
@@ -143,7 +145,6 @@ class mockData(object):
         new_config = (amount,current_config[1])
         print("updating {}  from {} to {} ".format(configitem,current_config, new_config))
         self.config[configitem] = new_config
-
 
     def generate_insert_statement(self,**kwargs):
         base_stmt = "insert into {} ({}) values ({});"
