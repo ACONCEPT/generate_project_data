@@ -15,7 +15,7 @@ def generate_orders(**kwargs):
 
     year = 365
 
-    days_interval = kwargs.get("days_interval",365)
+    days_interval = kwargs.get("days_interval",year * 5)
     interval = timedelta(days = days_interval)
     start = now - interval
 
