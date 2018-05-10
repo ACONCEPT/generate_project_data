@@ -1,3 +1,4 @@
 env/
+__pycache__/
 SAP_HANA_DATA/
 wasted_time/
